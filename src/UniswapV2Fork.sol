@@ -1,10 +1,13 @@
+// SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
 import {ERC20} from "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import {SafeMath} from "@uniswap-v2/contracts/libraries/SafeMath.sol";
-import {UQ112x112} from "@uniswap-v2/contracts/libraries/UQ112x112.sol";
+import {SafeMath} from "./libraries/SafeMath.sol";
+import {UQ112x112} from "./libraries/UQ112x112.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {IUniswapV2ForkFactory} from "./interfaces/IUniswapV2ForkFactory.sol";
+import {IUniswapV2Callee} from "@uniswap-v2/contracts/interfaces/IUniswapV2Callee.sol";
 
 contract UniswapV2Fork is ERC20 {
     using SafeMath for uint;
@@ -75,7 +78,10 @@ contract UniswapV2Fork is ERC20 {
     );
     event Sync(uint112 reserve0, uint112 reserve1);
 
-    constructor() {
+    constructor(
+        string memory name_,
+        string memory symbol_
+    ) ERC20(name_, symbol_) {
         factory = msg.sender;
     }
 
@@ -119,7 +125,7 @@ contract UniswapV2Fork is ERC20 {
         uint112 _reserve0,
         uint112 _reserve1
     ) private returns (bool feeOn) {
-        address feeTo = IOxygenFactory(factory).feeTo();
+        address feeTo = IUniswapV2ForkFactory(factory).feeTo();
         feeOn = feeTo != address(0);
         uint _kLast = kLast; // gas savings
         if (feeOn) {
@@ -127,9 +133,10 @@ contract UniswapV2Fork is ERC20 {
                 uint rootK = Math.sqrt(uint(_reserve0).mul(_reserve1));
                 uint rootKLast = Math.sqrt(_kLast);
                 if (rootK > rootKLast) {
-                    uint numerator = totalSupply.mul(rootK.sub(rootKLast));
+                    uint _totalSupply = totalSupply(); // gas savings, must be defined here since totalSupply can update in _mintFee
+                    uint numerator = _totalSupply.mul(rootK.sub(rootKLast));
                     uint denominator = rootK
-                        .mul(IOxygenFactory(factory).feeAmount())
+                        .mul(IUniswapV2ForkFactory(factory).feeAmount())
                         .add(rootKLast);
                     uint liquidity = numerator / denominator;
                     if (liquidity > 0) _mint(feeTo, liquidity);
@@ -149,10 +156,10 @@ contract UniswapV2Fork is ERC20 {
         uint amount1 = balance1.sub(_reserve1);
 
         bool feeOn = _mintFee(_reserve0, _reserve1);
-        uint _totalSupply = totalSupply; // gas savings, must be defined here since totalSupply can update in _mintFee
+        uint _totalSupply = totalSupply(); // gas savings, must be defined here since totalSupply can update in _mintFee
         if (_totalSupply == 0) {
             liquidity = Math.sqrt(amount0.mul(amount1)).sub(MINIMUM_LIQUIDITY);
-            _mint(address(0), MINIMUM_LIQUIDITY); // permanently lock the first MINIMUM_LIQUIDITY tokens
+            _mint(address(0xdead), MINIMUM_LIQUIDITY); // permanently lock the first MINIMUM_LIQUIDITY tokens
         } else {
             liquidity = Math.min(
                 amount0.mul(_totalSupply) / _reserve0,
@@ -176,10 +183,10 @@ contract UniswapV2Fork is ERC20 {
         address _token1 = token1; // gas savings
         uint balance0 = IERC20(_token0).balanceOf(address(this));
         uint balance1 = IERC20(_token1).balanceOf(address(this));
-        uint liquidity = balanceOf[address(this)];
+        uint liquidity = balanceOf(address(this));
 
         bool feeOn = _mintFee(_reserve0, _reserve1);
-        uint _totalSupply = totalSupply; // gas savings, must be defined here since totalSupply can update in _mintFee
+        uint _totalSupply = totalSupply(); // gas savings, must be defined here since totalSupply can update in _mintFee
         amount0 = liquidity.mul(balance0) / _totalSupply; // using balances ensures pro-rata distribution
         amount1 = liquidity.mul(balance1) / _totalSupply; // using balances ensures pro-rata distribution
         require(
@@ -227,7 +234,7 @@ contract UniswapV2Fork is ERC20 {
             if (amount0Out > 0) _safeTransfer(_token0, to, amount0Out); // optimistically transfer tokens
             if (amount1Out > 0) _safeTransfer(_token1, to, amount1Out); // optimistically transfer tokens
             if (data.length > 0)
-                IOxygenCallee(to).pancakeCall(
+                IUniswapV2Callee(to).uniswapV2Call(
                     msg.sender,
                     amount0Out,
                     amount1Out,
