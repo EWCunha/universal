@@ -6,7 +6,17 @@ An edge case for LayerZero protocol happens when there are two lockbox (`OFTAdap
 
 ![image](image.png)
 
+### Solution
+
+Ideally, don't use lockboxes at all in a cross-chain application. However, if the project really needs a lockbox contract, use only one in the entire mesh and allow tokens issuance only on the chain where the lockbox contract lives. This way, the lack of liquidity problem will never happen.
+
 ## #2
 
 Check `src/UniswapV2Fork.sol`.
+
+### Solution
+
+Run `forge test -vv` and check the logs. You'll see the pool being drained. Check `test/UniswapV2ForkTest.t.sol` to understand the logic.
+
+This drain of funds is possible because at line 262 of `UniswapV2Fork.sol` it's been used `1000` instead of `10000`, which breaks the invariant (constant product AMM: $x \cdot y \ge k$).
 
