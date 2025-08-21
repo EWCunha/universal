@@ -18,5 +18,5 @@ Check `src/UniswapV2Fork.sol`.
 
 Run `forge test -vv` and check the logs. You'll see the pool being drained. Check `test/UniswapV2ForkTest.t.sol` to understand the logic.
 
-This drain of funds is possible because at line 262 of `UniswapV2Fork.sol` it's been used `1000` instead of `10000`, which breaks the invariant (constant product AMM: $x \cdot y \ge k$).
+This drain of funds is possible because at [line 262](https://github.com/EWCunha/universal/blob/00b6161c7ed87f044021c03151bb4b36e6943e11/src/UniswapV2Fork.sol#L262) of `UniswapV2Fork.sol` it's been used `1000` instead of `10000`, which breaks the invariant (constant product AMM: $x \cdot y \ge k$). This is so because this protocol is using 0.16% fee (`16/10000`) instead of 0.3% (`3/1000`).
 
