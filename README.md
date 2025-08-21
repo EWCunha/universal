@@ -18,6 +18,10 @@ C → B: Bob now sends from C to B. Tokens are burned on C (tx succeeds ✅), bu
 
 ![image](image.png)
 
+### Why it happens
+
+A lockbox (`OFTAdapter`) must hold escrowed tokens to release on inbound transfers. With more than one lockbox in the mesh, some routes will end at a lockbox that hasn’t been pre-funded, causing destination failure after a successful burn on the source.
+
 ## #2 UniswapV2Fork
 
 See `src/UniswapV2Fork.sol`.
