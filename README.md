@@ -1,12 +1,24 @@
 # Universal questions
 
-## #1
+## #1 LayerZero: dual-lockbox liquidity trap
 
-An edge case for LayerZero protocol happens when there are two lockbox (`OFTAdapter`) contracts in the cross-chain mesh of an omnichain project. Imagine token `CoolToken` is deployed on 3 chains: two `OFTAdapter`s on chains A and B, and an `OFT` (mint and burn liquidity) on chain C. Let's say Bob wants to transfer `CoolToken` from chain A to chain C. So, tokens are locked on chain A and minted on chain C. The transfer is successful. Now he wants to transfer from chain C to chain B. Tokens are then burned on chain C (tx on chain C successful ✅), but since there is no liquidity on chain B, the transaction on the destination chain will revert and funds will be lost on chain C.
+### Scenario
+
+An edge case in LayerZero arises when an omnichain token uses two lockbox contracts (`OFTAdapter`) in its cross-chain mesh. Suppose `CoolToken` spans three chains:
+
+Chain A: `OFTAdapter` (lockbox/escrow)
+
+Chain B: `OFTAdapter` (lockbox/escrow)
+
+Chain C: `OFT` (mint/burn)
+
+A → C: Bob sends tokens from A to C. Tokens are locked on A and minted on C. ✅ Works.
+
+C → B: Bob now sends from C to B. Tokens are burned on C (tx succeeds ✅), but the destination on B is a lockbox with no liquidity to release. The destination tx reverts, and Bob’s tokens are effectively stuck until liquidity is added and the message is retried.
 
 ![image](image.png)
 
-## #2
+## #2 UniswapV2Fork
 
-Check `src/UniswapV2Fork.sol`.
+See `src/UniswapV2Fork.sol`.
 
